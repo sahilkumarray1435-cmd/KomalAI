@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Komal AI — Video Call</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0A0416;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* ═══ SCREENS ═══ */
+.scr { display: none; width: 100%; height: 100vh; flex-direction: column; }
+.scr.active { display: flex; }
+
+/* ═══ SCREEN 1: WELCOME ═══ */
+#s1 {
+  background: linear-gradient(160deg, #1e0a50 0%, #0A0416 70%);
+  align-items: center; justify-content: center;
+  padding: 30px 24px; text-align: center;
+  overflow-y: auto;
+}
+.logo-wrap {
+  width: 100px; height: 100px; border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B00, #E84393);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44px; margin: 0 auto 20px;
+  animation: logoPulse 2s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,107,0,0.5); }
+  50%      { box-shadow: 0 0 0 22px rgba(255,107,0,0); }
+}
+#s1 h1 { color: #fff; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+#s1 p  { color: rgba(255,255,255,0.5); font-size: 13.5px; line-height: 1.7; margin-bottom: 30px; }
+
+.big-btn {
+  width: 100%; max-width: 300px;
+  padding: 16px; border-radius: 50px;
+  background: linear-gradient(135deg, #FF6B00, #E84393);
+  color: #fff; border: none;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(255,107,0,0.45);
+  margin-bottom: 12px;
+  transition: transform .15s;
+}
+.big-btn:active { transform: scale(0.96); }
+.big-btn.ghost {
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+  box-shadow: none; font-size: 14px;
+}
+
+/* ═══ SCREEN 2: PERMISSION ═══ */
+#s2 {
+  background: #0D0520;
+  align-items: center; justify-content: flex-start;
+  padding: 0; overflow: hidden;
+}
+.perm-hdr {
+  width: 100%;
+  background: linear-gradient(135deg, #130828, #1E0E3A);
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.perm-hdr-av {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B00, #E84393);
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.perm-hdr span { color: #fff; font-size: 16px; font-weight: 700; }
+.perm-hdr small { color: rgba(255,255,255,0.45); font-size: 11px; display: block; }
+
+.perm-body {
+  flex: 1; width: 100%;
+  overflow-y: auto;
+  padding: 20px 18px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.perm-card {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+.perm-card h3 { color: #fff; font-size: 14.5px; margin-bottom: 10px; }
+
+/* Permission item */
+.perm-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: rgba(255,255,255,0.05);
+  transition: all 0.2s;
+  position: relative;
+}
+.perm-item.granted {
+  background: rgba(0,230,118,0.08);
+  border-color: rgba(0,230,118,0.3);
+}
+.perm-item.denied {
+  background: rgba(255,23,68,0.07);
+  border-color: rgba(255,23,68,0.25);
+}
+.perm-icon {
+  width: 46px; height: 46px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  background: rgba(255,107,0,0.15);
+}
+.perm-item.granted .perm-icon { background: rgba(0,230,118,0.12); }
+.perm-item.denied  .perm-icon { background: rgba(255,23,68,0.12); }
+.perm-info { flex: 1; }
+.perm-info b { color: #fff; font-size: 14px; display: block; margin-bottom: 2px; }
+.perm-info span { color: rgba(255,255,255,0.45); font-size: 11.5px; }
+.perm-status {
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+  flex-shrink: 0;
+}
+.status-idle    { background: rgba(255,107,0,0.15); color: #FF9A4D; }
+.status-granted { background: rgba(0,230,118,0.15); color: #00E676; }
+.status-denied  { background: rgba(255,23,68,0.15);  color: #FF5252; }
+.status-wait    { background: rgba(240,165,0,0.15);  color: #FFD166; }
+
+/* Chrome settings guide */
+.guide-box {
+  display: none;
+  background: rgba(255,107,0,0.07);
+  border: 1.5px solid rgba(255,107,0,0.25);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 4px;
+}
+.guide-box.show { display: block; }
+.guide-box p { color: rgba(255,255,255,0.8); font-size: 12.5px; line-height: 1.8; }
+.guide-step {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 8px;
+}
+.step-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #FF6B00; color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.step-txt { color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.65; }
+
+.perm-proceed-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #FF6B00, #E84393);
+  color: #fff; border: none;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 22px rgba(255,107,0,0.4);
+  transition: all .2s;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.perm-proceed-btn.ready {
+  opacity: 1;
+  pointer-events: all;
+}
+.perm-proceed-btn:active { transform: scale(0.97); }
+
+.skip-link {
+  text-align: center; margin-top: 10px;
+  color: rgba(255,255,255,0.3); font-size: 12px;
+  cursor: pointer; text-decoration: underline;
+}
+
+/* ═══ SCREEN 3: CALL ═══ */
+#s3 {
+  background: #0A0416;
+  position: relative; overflow: hidden;
+}
+
+.bg-b { position: absolute; border-radius: 50%; filter: blur(55px); opacity: 0.35; pointer-events: none; }
+.bb1 { width:280px;height:280px;top:-80px;left:-80px; background:rgba(25,6,64,1); animation:bf 9s ease-in-out infinite alternate; }
+.bb2 { width:220px;height:220px;bottom:-60px;right:-60px; background:rgba(20,5,45,1); animation:bf 12s ease-in-out infinite alternate-reverse; }
+.bb3 { width:160px;height:160px;top:40%;left:8%; background:rgba(255,107,0,0.12); animation:bf 7s ease-in-out infinite alternate; }
+@keyframes bf { from{transform:scale(1)translate(0,0);}to{transform:scale(1.15)translate(16px,-16px);} }
+
+/* Top bar */
+.top-bar {
+  position: relative; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 8px;
+  flex-shrink: 0;
+}
+.timer-p {
+  background: rgba(0,0,0,0.5);
+  color: #fff; font-size: 12px;
+  padding: 5px 13px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  letter-spacing: 0.5px;
+}
+.live-p {
+  background: rgba(0,230,118,0.1);
+  color: #00E676; font-size: 10px; font-weight: 700;
+  padding: 4px 11px; border-radius: 20px;
+  border: 1px solid rgba(0,230,118,0.25);
+  display: flex; align-items: center; gap: 5px;
+}
+.ldot { width:6px;height:6px;border-radius:50%;background:#00E676;animation:blink 1.5s infinite; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* PiP user cam */
+.pip {
+  position: absolute;
+  top: 16px; right: 14px; z-index: 6;
+  width: 96px; height: 136px;
+  border-radius: 16px; overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.15);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+  background: #130828;
+}
+.pip video { width:100%;height:100%;object-fit:cover;transform:scaleX(-1); }
+.pip-off {
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:rgba(255,255,255,0.35);font-size:11px;gap:5px;
+}
+.pip-lbl {
+  position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.55);color:rgba(255,255,255,0.7);
+  font-size:9px;padding:2px 8px;border-radius:10px;white-space:nowrap;
+}
+
+/* Komal center */
+.k-center {
+  flex:1; position:relative; z-index:2;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.av-wrap { position:relative; }
+.k-av {
+  width:140px;height:140px;border-radius:50%;
+  background:#130828;
+  display:flex;align-items:center;justify-content:center;font-size:58px;
+  position:relative; z-index:1;
+}
+.k-av::before {
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  background:conic-gradient(#FF6B00,#F0A500,#E84393,#FF6B00);
+  z-index:-1;animation:rotg 3s linear infinite;
+}
+@keyframes rotg{to{filter:hue-rotate(360deg);}}
+
+/* rings */
+.r,.lr{position:absolute;border-radius:50%;opacity:0;pointer-events:none;}
+.r{border:2px solid #FF6B00;}
+.lr{border:2.5px solid #00E676;}
+.r1{width:168px;height:168px;top:-14px;left:-14px;}
+.r2{width:200px;height:200px;top:-30px;left:-30px;}
+.r3{width:236px;height:236px;top:-48px;left:-48px;}
+.lr1{width:168px;height:168px;top:-14px;left:-14px;}
+.lr2{width:202px;height:202px;top:-31px;left:-31px;}
+.speaking .r1{animation:rw 1.2s ease-out infinite;}
+.speaking .r2{animation:rw 1.2s ease-out infinite .25s;}
+.speaking .r3{animation:rw 1.2s ease-out infinite .5s;}
+@keyframes rw{0%{opacity:.8;transform:scale(.92);}100%{opacity:0;transform:scale(1.3);}}
+.listening .lr1{animation:lw 1s ease-out infinite;}
+.listening .lr2{animation:lw 1s ease-out infinite .3s;}
+@keyframes lw{0%{opacity:.9;transform:scale(.88);}100%{opacity:0;transform:scale(1.42);}}
+
+.k-name{color:#fff;font-size:22px;font-weight:800;margin-top:18px;}
+.k-st{font-size:13px;padding:4px 16px;border-radius:20px;margin-top:8px;transition:all .3s;}
+.si{color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.06);}
+.ss{color:#FF9A4D;background:rgba(255,107,0,0.14);}
+.sl{color:#00E676;background:rgba(0,230,118,0.1);}
+.st{color:#FFD166;background:rgba(240,165,0,0.11);}
+
+/* Subtitle */
+.sub-wrap{
+  position:relative;z-index:3;
+  padding:0 14px 8px; text-align:center; flex-shrink:0; min-height:48px;
+}
+.sub{
+  display:inline-block;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);
+  color:#fff;font-size:14px;line-height:1.65;
+  padding:9px 18px;border-radius:14px;
+  border:1px solid rgba(255,255,255,0.07);
+  max-width:100%;opacity:0;transition:opacity .3s;
+}
+.sub.on{opacity:1;}
+
+/* Controls */
+.ctrls{
+  position:relative;z-index:5;
+  background:linear-gradient(to top,rgba(10,4,22,.97) 55%,transparent);
+  padding:12px 20px 32px;flex-shrink:0;
+}
+.speak-row{display:flex;flex-direction:column;align-items:center;margin-bottom:16px;}
+.speak-btn{
+  width:72px;height:72px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#FF6B00,#E84393);
+  font-size:28px;cursor:pointer;
+  box-shadow:0 6px 24px rgba(255,107,0,0.45);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.speak-btn.on{
+  background:linear-gradient(135deg,#00E676,#00BFA5);
+  box-shadow:0 6px 24px rgba(0,230,118,0.5);
+  animation:sp 1s ease-in-out infinite;
+}
+@keyframes sp{0%,100%{box-shadow:0 6px 24px rgba(0,230,118,.4);}50%{box-shadow:0 8px 40px rgba(0,230,118,.8);}}
+.speak-btn:active{transform:scale(.88);}
+.speak-lbl{color:rgba(255,255,255,0.45);font-size:11px;margin-top:7px;}
+
+.btn-row{display:flex;justify-content:space-around;align-items:center;}
+.cb{display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:transparent;cursor:pointer;}
+.ci{
+  width:50px;height:50px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.14);
+  transition:all .18s;
+}
+.cb:active .ci{transform:scale(.86);}
+.cl{color:rgba(255,255,255,0.45);font-size:10.5px;}
+.cb.off .ci{background:rgba(255,23,68,0.18);border-color:rgba(255,23,68,0.4);}
+.cb.danger .ci{background:rgba(255,23,68,0.22);border-color:rgba(255,23,68,0.5);}
+
+.no-sr{
+  display:none;
+  background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.28);
+  color:#FFD166;font-size:12px;padding:8px 14px;border-radius:12px;
+  text-align:center;margin-bottom:10px;
+}
+.no-sr.on{display:block;}
+
+/* Chat */
+.chat-ov{
+  position:absolute;inset:0;z-index:20;
+  background:#0A0416;
+  display:none;flex-direction:column;
+}
+.chat-ov.on{display:flex;}
+.chat-top{
+  background:linear-gradient(135deg,#130828,#1E0E3A);
+  padding:15px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;
+}
+.chat-top span{color:#fff;font-size:15px;font-weight:700;}
+.close-btn{
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,0.09);border:none;
+  color:#fff;font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.chat-msgs{
+  flex:1;overflow-y:auto;padding:12px 14px;
+  display:flex;flex-direction:column;gap:10px;
+  background:#0D0520;
+}
+.chat-msgs::-webkit-scrollbar{width:3px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(255,107,0,.3);border-radius:6px;}
+.cm{display:flex;gap:8px;}
+.cm.me{flex-direction:row-reverse;}
+.cb3{
+  max-width:78%;padding:10px 14px;border-radius:15px;
+  font-size:13.5px;line-height:1.65;color:#fff;
+}
+.cm.bot .cb3{background:rgba(255,107,0,.16);border-left:2.5px solid #FF6B00;border-bottom-left-radius:4px;}
+.cm.me  .cb3{background:rgba(255,255,255,.09);border-bottom-right-radius:4px;}
+.chat-inp{
+  display:flex;gap:9px;padding:11px 14px 20px;
+  background:#0A0416;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;
+}
+.ci3{
+  flex:1;background:rgba(255,255,255,0.07);
+  border:1.5px solid rgba(255,107,0,0.28);border-radius:22px;
+  padding:10px 16px;font-size:14px;color:#fff;outline:none;
+  transition:border-color .2s;
+}
+.ci3::placeholder{color:rgba(255,255,255,0.28);}
+.ci3:focus{border-color:#FF6B00;}
+.cs3{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,#FF6B00,#E84393);
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.cs3:active{transform:scale(.88);}
+.cs3 svg{width:17px;height:17px;fill:#fff;}
+</style>
+</head>
+<body>
+
+<!-- ════ SCREEN 1: WELCOME ════ -->
+<div class="scr active" id="s1">
+  <div class="logo-wrap">🌸</div>
+  <h1>Komal AI</h1>
+  <p>आपकी मुफ़्त हिंदी AI सहायक<br>आवाज़ और video call से बात करें</p>
+  <button class="big-btn" onclick="showPerm()">📞 Call शुरू करें</button>
+  <button class="big-btn ghost" onclick="startCall(false,false)">💬 सिर्फ Chat</button>
+</div>
+
+<!-- ════ SCREEN 2: PERMISSIONS ════ -->
+<div class="scr" id="s2">
+  <div class="perm-hdr">
+    <div class="perm-hdr-av">🌸</div>
+    <div>
+      <span>Komal AI</span>
+      <small>Camera और Mic की permission दें</small>
+    </div>
+  </div>
+
+  <div class="perm-body">
+    <!-- Camera -->
+    <div class="perm-card">
+      <h3>📍 Permission दें</h3>
+
+      <div class="perm-item" id="camItem" onclick="requestCam()">
+        <div class="perm-icon">📷</div>
+        <div class="perm-info">
+          <b>Camera</b>
+          <span>Video call के लिए ज़रूरी</span>
+        </div>
+        <span class="perm-status status-idle" id="camSt">दें →</span>
+      </div>
+
+      <div class="perm-item" id="micItem" onclick="requestMic()">
+        <div class="perm-icon">🎙️</div>
+        <div class="perm-info">
+          <b>Microphone</b>
+          <span>बोलकर बात करने के लिए</span>
+        </div>
+        <span class="perm-status status-idle" id="micSt">दें →</span>
+      </div>
+
+      <div class="perm-item" id="bothItem" onclick="requestBoth()"
+           style="background:rgba(255,107,0,0.08);border-color:rgba(255,107,0,0.3);">
+        <div class="perm-icon" style="background:rgba(255,107,0,0.2);">✨</div>
+        <div class="perm-info">
+          <b>दोनों एक साथ दें</b>
+          <span>Camera + Microphone together</span>
+        </div>
+        <span class="perm-status status-idle" id="bothSt">दें →</span>
+      </div>
+    </div>
+
+    <!-- Guide: if denied -->
+    <div class="guide-box" id="guideBox">
+      <p><b style="color:#FF9A4D;">❌ Permission block हो गई?</b> Chrome में manually दें:</p>
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <div class="step-txt">Chrome address bar में बाईं तरफ 🔒 <b>Lock icon</b> दबाएं</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <div class="step-txt"><b>Site settings</b> → Camera → <b>Allow</b> करें</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <div class="step-txt"><b>Site settings</b> → Microphone → <b>Allow</b> करें</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">4</div>
+        <div class="step-txt">Page <b>Reload</b> करें (↺ button) फिर दोबारा try करें</div>
+      </div>
+    </div>
+
+    <!-- proceed -->
+    <button class="perm-proceed-btn" id="proceedBtn" onclick="proceed()">
+      🎥 Call शुरू करें
+    </button>
+    <div class="skip-link" onclick="startCall(false,false)">
+      Skip — बिना Camera/Mic के सिर्फ Chat
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCREEN 3: CALL ════ -->
+<div class="scr" id="s3">
+  <div class="bg-b bb1"></div>
+  <div class="bg-b bb2"></div>
+  <div class="bg-b bb3"></div>
+
+  <!-- Top -->
+  <div class="top-bar">
+    <div class="timer-p" id="timerEl">00:00</div>
+    <div class="live-p"><div class="ldot"></div>AI Live</div>
+  </div>
+
+  <!-- PiP -->
+  <div class="pip" id="pipEl">
+    <video id="userVid" autoplay muted playsinline></video>
+    <div class="pip-off" id="pipOff">
+      <span style="font-size:24px">📵</span>
+      <span>Camera नहीं</span>
+    </div>
+    <div class="pip-lbl">आप</div>
+  </div>
+
+  <!-- Komal -->
+  <div class="k-center">
+    <div class="av-wrap" id="avWrap">
+      <div class="r r1"></div><div class="r r2"></div><div class="r r3"></div>
+      <div class="lr lr1"></div><div class="lr lr2"></div>
+      <div class="k-av">🌸</div>
+    </div>
+    <div class="k-name">Komal</div>
+    <div class="k-st si" id="kSt">तैयार है...</div>
+  </div>
+
+  <!-- Subtitle -->
+  <div class="sub-wrap"><span class="sub" id="subEl"></span></div>
+
+  <!-- Controls -->
+  <div class="ctrls">
+    <div class="no-sr" id="noSr">⚠️ Voice काम नहीं — Chat से बात करें 👇</div>
+
+    <div class="speak-row">
+      <button class="speak-btn" id="speakBtn" onclick="toggleListen()">🎤</button>
+      <div class="speak-lbl" id="speakLbl">दबाकर बोलें</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="cb" id="btnMic" onclick="toggleMic()">
+        <div class="ci">🎙️</div><span class="cl">Mic</span>
+      </button>
+      <button class="cb" id="btnCam" onclick="toggleCam()">
+        <div class="ci">📷</div><span class="cl">Camera</span>
+      </button>
+      <button class="cb" onclick="openChat()">
+        <div class="ci">💬</div><span class="cl">Chat</span>
+      </button>
+      <button class="cb" onclick="retry()">
+        <div class="ci">🔄</div><span class="cl">दोहराएं</span>
+      </button>
+      <button class="cb danger" onclick="endCall()">
+        <div class="ci">📵</div><span class="cl">End</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Chat Overlay -->
+  <div class="chat-ov" id="chatOv">
+    <div class="chat-top">
+      <span>💬 Komal से Chat</span>
+      <button class="close-btn" onclick="closeChat()">✕</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-inp">
+      <input class="ci3" id="chatInp" placeholder="यहाँ type करें..." onkeydown="ck(event)"/>
+      <button class="cs3" onclick="cs()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════
+   SYSTEM PROMPT
+═══════════════════════════════ */
+const SYS = `तुम एक AI सहायक हो जिसका नाम Komal है। हमेशा सरल हिंदी में जवाब दो।
+- मित्रवत और गर्मजोशी से बात करो
+- जवाब बहुत छोटे रखो 1-2 वाक्य (यह voice call है)
+- यूज़र का नाम जानो और उसका उपयोग करो
+- पढ़ाई, GK, मोटिवेशन में मदद करो`;
+
+/* ═══════════════════════════════
+   STATE
+═══════════════════════════════ */
+let stream    = null;
+let camOn     = false;
+let micOn     = false;
+let camPerm   = false;  // granted?
+let micPerm   = false;
+let recog     = null;
+let hasSR     = false;
+let isListen  = false;
+let isSpeak   = false;
+let history   = [];
+let timerID   = null;
+let timerSec  = 0;
+let lastTxt   = '';
+let busy      = false;
+
+/* ═══════════════════════════════
+   SCREEN SWITCH
+═══════════════════════════════ */
+function show(id) {
+  document.querySelectorAll('.scr').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ═══════════════════════════════
+   SCREEN 1 → 2 (Permission screen)
+═══════════════════════════════ */
+function showPerm() { show('s2'); }
+
+/* ═══════════════════════════════
+   PERMISSION REQUESTS
+═══════════════════════════════ */
+async function requestCam() {
+  setPermSt('cam','wait','⏳ ...');
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    s.getTracks().forEach(t => t.stop()); // just checking
+    camPerm = true;
+    setPermSt('cam','granted','✓ मिली');
+    document.getElementById('camItem').classList.add('granted');
+  } catch(e) {
+    camPerm = false;
+    setPermSt('cam','denied','✗ नहीं');
+    document.getElementById('camItem').classList.add('denied');
+    showGuide();
+  }
+  updateProceed();
+}
+
+async function requestMic() {
+  setPermSt('mic','wait','⏳ ...');
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    s.getTracks().forEach(t => t.stop());
+    micPerm = true;
+    setPermSt('mic','granted','✓ मिली');
+    document.getElementById('micItem').classList.add('granted');
+  } catch(e) {
+    micPerm = false;
+    setPermSt('mic','denied','✗ नहीं');
+    document.getElementById('micItem').classList.add('denied');
+    showGuide();
+  }
+  updateProceed();
+}
+
+async function requestBoth() {
+  setPermSt('both','wait','⏳ ...');
+  document.getElementById('camSt').className  = 'perm-status status-wait';
+  document.getElementById('camSt').textContent = '⏳ ...';
+  document.getElementById('micSt').className  = 'perm-status status-wait';
+  document.getElementById('micSt').textContent = '⏳ ...';
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    s.getTracks().forEach(t => t.stop());
+    camPerm = micPerm = true;
+    setPermSt('both','granted','✓ दोनों मिलीं');
+    setPermSt('cam','granted','✓ मिली');
+    setPermSt('mic','granted','✓ मिली');
+    document.getElementById('camItem').classList.add('granted');
+    document.getElementById('micItem').classList.add('granted');
+    document.getElementById('bothItem').classList.add('granted');
+  } catch(e) {
+    setPermSt('both','denied','✗ नहीं मिली');
+    showGuide();
+    // try individually
+    await requestCam();
+    await requestMic();
+    return;
+  }
+  updateProceed();
+}
+
+function setPermSt(who, cls, txt) {
+  const el = document.getElementById(who+'St');
+  if (!el) return;
+  el.className = 'perm-status status-'+cls;
+  el.textContent = txt;
+}
+
+function showGuide() {
+  document.getElementById('guideBox').classList.add('show');
+}
+
+function updateProceed() {
+  const btn = document.getElementById('proceedBtn');
+  if (camPerm || micPerm) {
+    btn.classList.add('ready');
+    btn.textContent = camPerm && micPerm ? '🎥 Camera + Mic के साथ Call' :
+                      camPerm            ? '📷 Camera के साथ Call' :
+                                           '🎙️ Mic के साथ Call';
+  }
+}
+
+function proceed() {
+  startCall(camPerm, micPerm);
+}
+
+/* ═══════════════════════════════
+   START CALL
+═══════════════════════════════ */
+async function startCall(wantCam, wantMic) {
+  show('s3');
+
+  // Get actual stream
+  if (wantCam || wantMic) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: wantCam,
+        audio: wantMic
+      });
+      camOn = wantCam && stream.getVideoTracks().length > 0;
+      micOn = wantMic && stream.getAudioTracks().length > 0;
+    } catch(e) {
+      console.warn('Stream failed:', e.message);
+      stream = null; camOn = false; micOn = false;
+    }
+  }
+
+  // Video PiP
+  if (stream && camOn) {
+    document.getElementById('userVid').srcObject = stream;
+    document.getElementById('pipOff').style.display = 'none';
+  } else {
+    document.getElementById('pipOff').style.display = 'flex';
+  }
+
+  updateMicBtn(); updateCamBtn();
+  startTimer();
+  initSR();
+
+  setTimeout(() => {
+    const g = 'नमस्ते! 🌸 मैं Komal हूँ। '
+      + (hasSR ? '🎤 बटन दबाएं और बोलें!' : 'Chat बटन से बात करें!');
+    addMsg('bot', g);
+    komalSpeak(g);
+  }, 600);
+}
+
+/* ═══════════════════════════════
+   TIMER
+═══════════════════════════════ */
+function startTimer() {
+  timerID = setInterval(() => {
+    timerSec++;
+    const m = String(Math.floor(timerSec/60)).padStart(2,'0');
+    const s = String(timerSec%60).padStart(2,'0');
+    document.getElementById('timerEl').textContent = m+':'+s;
+  }, 1000);
+}
+
+/* ═══════════════════════════════
+   SPEECH RECOGNITION
+═══════════════════════════════ */
+function initSR() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    hasSR = false;
+    document.getElementById('noSr').classList.add('on');
+    setTimeout(() => openChat(), 1000);
+    return;
+  }
+  hasSR = true;
+  recog = new SR();
+  recog.lang = 'hi-IN';
+  recog.continuous = false;
+  recog.interimResults = true;
+
+  recog.onstart = () => {
+    isListen = true;
+    setAv('l'); setSt('सुन रही हूँ...','sl');
+    setSub('🎤 बोलिए...', true);
+    document.getElementById('speakBtn').classList.add('on');
+    document.getElementById('speakLbl').textContent = 'बोल रहे हैं...';
+  };
+  recog.onresult = (e) => {
+    let f='',i='';
+    for(let x=e.resultIndex;x<e.results.length;x++){
+      if(e.results[x].isFinal) f+=e.results[x][0].transcript;
+      else i+=e.results[x][0].transcript;
+    }
+    setSub('🎤 '+(f||i), true);
+    if(f) onSpeech(f.trim());
+  };
+  recog.onerror = (e) => {
+    stopListen();
+    if(e.error==='no-speech'){setSub('कुछ सुनाई नहीं दिया',true);setTimeout(()=>setSub('',false),2000);}
+    else if(e.error==='not-allowed'){setSub('Microphone की permission दें',true);}
+    else if(e.error==='network'){setSub('Voice के लिए internet चाहिए',true);setTimeout(()=>setSub('',false),2500);}
+  };
+  recog.onend = () => {
+    isListen = false;
+    document.getElementById('speakBtn').classList.remove('on');
+    document.getElementById('speakLbl').textContent = 'दबाकर बोलें';
+    if(!isSpeak) setAv('i');
+  };
+}
+
+function toggleListen() {
+  if(!hasSR){openChat();return;}
+  if(isSpeak){stopSpeaking();return;}
+  if(isListen){stopListen();return;}
+  try{recog.start();}catch(e){console.warn(e);}
+}
+function stopListen() {
+  if(recog&&isListen){try{recog.stop();}catch(e){}}
+  isListen=false;
+  document.getElementById('speakBtn').classList.remove('on');
+  document.getElementById('speakLbl').textContent='दबाकर बोलें';
+}
+
+/* ═══════════════════════════════
+   HANDLE SPEECH → AI
+═══════════════════════════════ */
+async function onSpeech(txt) {
+  if(!txt||busy) return;
+  stopListen();
+  setSub('आप: '+txt, true);
+  addMsg('me', txt);
+  history.push({role:'user',text:txt});
+  lastTxt = txt; busy = true;
+  setAv('t'); setSt('सोच रही हूँ...','st');
+  const reply = await fetchAI(txt);
+  if(reply){ history.push({role:'bot',text:reply}); addMsg('bot',reply); komalSpeak(reply); }
+  busy = false;
+}
+
+/* ═══════════════════════════════
+   AI
+═══════════════════════════════ */
+async function fetchAI(txt) {
+  try {
+    let ctx = history.length>1
+      ? history.slice(-6).map(m=>m.role==='user'?'User: '+m.text:'Komal: '+m.text).join('\n')+'\nKomal:'
+      : txt;
+    const url = 'https://text.pollinations.ai/'+encodeURIComponent(ctx)
+      +'?model=openai&system='+encodeURIComponent(SYS)
+      +'&seed='+Math.floor(Math.random()*9999)+'&private=true';
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return (await r.text()).trim()||'माफ़ करें, जवाब नहीं मिला।';
+  } catch(e) {
+    return 'नेटवर्क की दिक्कत है। दोबारा कोशिश करें। 🙏';
+  }
+}
+
+/* ═══════════════════════════════
+   TTS
+═══════════════════════════════ */
+function komalSpeak(txt) {
+  if(!window.speechSynthesis){setSub('Komal: '+txt,true);setAv('i');setSt('तैयार है...','si');return;}
+  speechSynthesis.cancel();
+  isSpeak=true; setAv('s'); setSt('बोल रही हूँ...','ss'); setSub('Komal: '+txt,true);
+  const u=new SpeechSynthesisUtterance(txt);
+  u.lang='hi-IN'; u.rate=0.9; u.pitch=1.1; u.volume=1;
+  const vs=speechSynthesis.getVoices();
+  const hv=vs.find(v=>v.lang==='hi-IN')||vs.find(v=>v.lang.startsWith('hi'));
+  if(hv) u.voice=hv;
+  u.onend=()=>{isSpeak=false;setAv('i');setSt('तैयार है...','si');setTimeout(()=>setSub('',false),2500);};
+  u.onerror=()=>{isSpeak=false;setAv('i');setSt('तैयार है...','si');};
+  speechSynthesis.speak(u);
+}
+function stopSpeaking(){
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  isSpeak=false; setAv('i'); setSt('तैयार है...','si'); setSub('',false);
+}
+function retry(){ if(!busy&&lastTxt) onSpeech(lastTxt); }
+
+/* ═══════════════════════════════
+   CONTROLS
+═══════════════════════════════ */
+function toggleMic(){
+  if(!stream) return;
+  micOn=!micOn;
+  stream.getAudioTracks().forEach(t=>t.enabled=micOn);
+  updateMicBtn();
+}
+function updateMicBtn(){
+  const b=document.getElementById('btnMic');
+  b.classList.toggle('off',!micOn);
+  b.querySelector('.ci').textContent=micOn?'🎙️':'🔇';
+  b.querySelector('.cl').textContent=micOn?'Mic':'Muted';
+}
+function toggleCam(){
+  if(!stream) return;
+  const vt=stream.getVideoTracks();
+  if(!vt.length) return;
+  camOn=!camOn; vt.forEach(t=>t.enabled=camOn);
+  document.getElementById('pipOff').style.display=camOn?'none':'flex';
+  updateCamBtn();
+}
+function updateCamBtn(){
+  const b=document.getElementById('btnCam');
+  b.classList.toggle('off',!camOn);
+  b.querySelector('.ci').textContent=camOn?'📷':'🚫';
+  b.querySelector('.cl').textContent=camOn?'Camera':'Cam Off';
+}
+
+function openChat(){document.getElementById('chatOv').classList.add('on');document.getElementById('chatInp').focus();}
+function closeChat(){document.getElementById('chatOv').classList.remove('on');}
+
+function addMsg(who,txt){
+  const c=document.getElementById('chatMsgs');
+  const d=document.createElement('div');
+  d.className='cm '+who;
+  d.innerHTML=`<div class="cb3">${txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+async function cs(){
+  const el=document.getElementById('chatInp');
+  const t=el.value.trim();
+  if(!t||busy) return;
+  el.value='';
+  await onSpeech(t);
+}
+function ck(e){if(e.key==='Enter')cs();}
+
+function endCall(){
+  stopSpeaking(); stopListen();
+  clearInterval(timerID); timerSec=0;
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  stream=null; camOn=false; micOn=false; camPerm=false; micPerm=false;
+  history=[]; busy=false; lastTxt='';
+  document.getElementById('timerEl').textContent='00:00';
+  document.getElementById('chatMsgs').innerHTML='';
+  document.getElementById('chatOv').classList.remove('on');
+  // reset perm screen
+  ['cam','mic','both'].forEach(w=>{
+    const el=document.getElementById(w+'St');
+    if(el){el.className='perm-status status-idle';el.textContent='दें →';}
+    const item=document.getElementById(w+'Item');
+    if(item){item.classList.remove('granted','denied');}
+  });
+  document.getElementById('guideBox').classList.remove('show');
+  document.getElementById('proceedBtn').classList.remove('ready');
+  document.getElementById('proceedBtn').textContent='🎥 Call शुरू करें';
+  show('s1');
+}
+
+/* UI helpers */
+function setAv(st){
+  const w=document.getElementById('avWrap');
+  w.classList.remove('speaking','listening');
+  if(st==='s') w.classList.add('speaking');
+  else if(st==='l') w.classList.add('listening');
+}
+function setSt(txt,cls){
+  const el=document.getElementById('kSt');
+  el.textContent=txt; el.className='k-st '+cls;
+}
+function setSub(txt,on){
+  const el=document.getElementById('subEl');
+  el.textContent=txt;
+  el.classList.toggle('on',on&&!!txt);
+}
+
+/* preload voices */
+if(window.speechSynthesis){
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
+}
+</script>
+</body>
+</html>
