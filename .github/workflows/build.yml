@@ -1,253 +1,32 @@
 name: Build APK
+
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
-  apk:
+  build:
+
     runs-on: ubuntu-latest
+
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v3
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Create all project files
+      - name: Build APK
         run: |
-          mkdir -p app/src/main/java/com/komalai/app
-          mkdir -p app/src/main/res/layout
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p gradle/wrapper
-
-          echo 'rootProject.name="KomalAI"
-          include ":app"' > settings.gradle
-
-          cat > build.gradle << ENDOFFILE
-          buildscript {
-            repositories { google(); mavenCentral() }
-            dependencies { classpath "com.android.tools.build:gradle:7.4.2" }
-          }
-          allprojects { repositories { google(); mavenCentral() } }
-          ENDOFFILE
-
-          cat > app/build.gradle << ENDOFFILE
-          plugins { id "com.android.application" }
-          android {
-            compileSdkVersion 33
-            defaultConfig {
-              applicationId "com.komalai.app"
-              minSdkVersion 21
-              targetSdkVersion 33
-              versionCode 1
-              versionName "1.0"
-            }
-            buildTypes {
-              release { minifyEnabled false; signingConfig signingConfigs.debug }
-            }
-            compileOptions {
-              sourceCompatibility JavaVersion.VERSION_1_8
-              targetCompatibility JavaVersion.VERSION_1_8
-            }
-          }
-          dependencies {
-            implementation "androidx.appcompat:appcompat:1.6.1"
-          }
-          ENDOFFILE
-
-          cat > gradle/wrapper/gradle-wrapper.properties << ENDOFFILE
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          ENDOFFILE
-
-          cat > app/src/main/AndroidManifest.xml << ENDOFFILE
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.komalai.app">
-            <uses-permission android:name="android.permission.INTERNET"/>
-            <uses-permission android:name="android.permission.CAMERA"/>
-            <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-            <uses-feature android:name="android.hardware.camera" android:required="false"/>
-            <uses-feature android:name="android.hardware.microphone" android:required="false"/>
-            <application
-              android:allowBackup="true"
-              android:icon="@mipmap/ic_launcher"
-              android:label="Komal AI"
-              android:hardwareAccelerated="true"
-              android:usesCleartextTraffic="true"
-              android:theme="@style/AppTheme">
-              <activity android:name=".MainActivity" android:exported="true"
-                android:screenOrientation="portrait"
-                android:windowSoftInputMode="adjustResize">
-                <intent-filter>
-                  <action android:name="android.intent.action.MAIN"/>
-                  <category android:name="android.intent.category.LAUNCHER"/>
-                </intent-filter>
-              </activity>
-            </application>
-          </manifest>
-          ENDOFFILE
-
-          cat > app/src/main/res/values/strings.xml << ENDOFFILE
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources><string name="app_name">Komal AI</string></resources>
-          ENDOFFILE
-
-          cat > app/src/main/res/values/styles.xml << ENDOFFILE
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-            <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
-              <item name="android:windowBackground">#0A0416</item>
-              <item name="android:statusBarColor">#0A0416</item>
-              <item name="android:navigationBarColor">#0A0416</item>
-            </style>
-          </resources>
-          ENDOFFILE
-
-          cat > app/src/main/res/layout/activity_main.xml << ENDOFFILE
-          <?xml version="1.0" encoding="utf-8"?>
-          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#0A0416"/>
-          ENDOFFILE
-
-          python3 -c "
-          import struct, zlib
-          w, h = 108, 108
-          rows = []
-          for y in range(h):
-              row = [0]
-              for x in range(w):
-                  d = ((x-w//2)**2+(y-h//2)**2)**0.5
-                  row += [255,107,0,255] if d < w*0.46 else [10,4,22,255]
-              rows.append(bytes(row))
-          raw = b''.join(rows)
-          comp = zlib.compress(raw)
-          def ch(n,d):
-              c = n+d
-              return struct.pack('>I',len(d))+c+struct.pack('>I',zlib.crc32(c)&0xffffffff)
-          png = b'\x89PNG\r\n\x1a\n'+ch(b'IHDR',struct.pack('>IIBBBBB',w,h,8,6,0,0,0))+ch(b'IDAT',comp)+ch(b'IEND',b'')
-          open('app/src/main/res/mipmap-hdpi/ic_launcher.png','wb').write(png)
-          print('Icon OK')
-          "
-
-          cat > app/src/main/java/com/komalai/app/MainActivity.java << ENDOFFILE
-          package com.komalai.app;
-          import android.Manifest;
-          import android.app.Activity;
-          import android.content.pm.PackageManager;
-          import android.graphics.Color;
-          import android.os.Build;
-          import android.os.Bundle;
-          import android.view.WindowManager;
-          import android.webkit.PermissionRequest;
-          import android.webkit.WebChromeClient;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.widget.Toast;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
-          public class MainActivity extends Activity {
-              WebView webView;
-              PermissionRequest pendingPerm;
-              static final int REQ = 101;
-              static final String URL = "https://confidential-amethyst-3rt4rk3vro.edgeone.app/";
-              @Override
-              protected void onCreate(Bundle savedState) {
-                  super.onCreate(savedState);
-                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                  webView = new WebView(this);
-                  webView.setBackgroundColor(Color.parseColor("#0A0416"));
-                  setContentView(webView);
-                  WebSettings ws = webView.getSettings();
-                  ws.setJavaScriptEnabled(true);
-                  ws.setDomStorageEnabled(true);
-                  ws.setMediaPlaybackRequiresUserGesture(false);
-                  ws.setDatabaseEnabled(true);
-                  if (Build.VERSION.SDK_INT >= 21) {
-                      ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                  }
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.setWebChromeClient(new WebChromeClient() {
-                      @Override
-                      public void onPermissionRequest(final PermissionRequest request) {
-                          runOnUiThread(() -> {
-                              boolean cam = ContextCompat.checkSelfPermission(
-                                  MainActivity.this, Manifest.permission.CAMERA)
-                                  == PackageManager.PERMISSION_GRANTED;
-                              boolean mic = ContextCompat.checkSelfPermission(
-                                  MainActivity.this, Manifest.permission.RECORD_AUDIO)
-                                  == PackageManager.PERMISSION_GRANTED;
-                              if (!cam || !mic) {
-                                  pendingPerm = request;
-                                  ActivityCompat.requestPermissions(MainActivity.this,
-                                      new String[]{Manifest.permission.CAMERA,
-                                          Manifest.permission.RECORD_AUDIO}, REQ);
-                              } else {
-                                  request.grant(request.getResources());
-                              }
-                          });
-                      }
-                  });
-                  ActivityCompat.requestPermissions(this,
-                      new String[]{Manifest.permission.CAMERA,
-                          Manifest.permission.RECORD_AUDIO}, REQ);
-                  webView.loadUrl(URL);
-              }
-              @Override
-              public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
-                  super.onRequestPermissionsResult(code, perms, results);
-                  if (pendingPerm != null) {
-                      boolean ok = true;
-                      for (int r : results) {
-                          if (r != PackageManager.PERMISSION_GRANTED) { ok = false; break; }
-                      }
-                      if (ok) {
-                          pendingPerm.grant(pendingPerm.getResources());
-                      } else {
-                          pendingPerm.deny();
-                          Toast.makeText(this,
-                              "Settings में Camera और Mic Allow करें",
-                              Toast.LENGTH_LONG).show();
-                      }
-                      pendingPerm = null;
-                  }
-              }
-              @Override
-              public void onBackPressed() {
-                  if (webView.canGoBack()) webView.goBack();
-                  else super.onBackPressed();
-              }
-              @Override protected void onPause() { super.onPause(); webView.onPause(); }
-              @Override protected void onResume() { super.onResume(); webView.onResume(); }
-              @Override protected void onDestroy() { webView.destroy(); super.onDestroy(); }
-          }
-          ENDOFFILE
-
-          gradle wrapper
           chmod +x gradlew
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+          ./gradlew assembleDebug
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: KomalAI-APK
-          path: app/build/outputs/apk/release/*.apk
-          retention-days: 30
-          
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
